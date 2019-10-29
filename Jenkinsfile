@@ -12,7 +12,11 @@ pipeline {
         stage('Info') {
             steps {
                 script {
-                    currentBuild.description = "Build $BRANCH branch"
+                    branch_name = sh (
+                        script: """git status | grep "On branch" | sed 's/On branch//g'""",
+                        returnStdout: true
+                        ).trim()
+                    currentBuild.description = "Build ${branch_name} branch"
                 }
             }
         }
