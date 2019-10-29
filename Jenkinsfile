@@ -6,17 +6,12 @@ pipeline {
             steps {
                 checkout scm
                 sh "git status"
-                sh "env"
             }
         }
         
         stage('Info') {
             steps {
                 script {
-                    branch_name = sh (
-                        script: """git status | grep "On branch" | sed 's/On branch//g'""",
-                        returnStdout: true
-                        ).trim()
                     currentBuild.description = "Build $GIT_BRANCH branch"
                 }
             }
