@@ -6,6 +6,7 @@ pipeline {
             steps {
                 checkout scm
                 sh "git status"
+                sh "env"
             }
         }
         
@@ -16,7 +17,7 @@ pipeline {
                         script: """git status | grep "On branch" | sed 's/On branch//g'""",
                         returnStdout: true
                         ).trim()
-                    currentBuild.description = "Build ${branch_name} branch"
+                    currentBuild.description = "Build $GIT_BRANCH branch"
                 }
             }
         }
