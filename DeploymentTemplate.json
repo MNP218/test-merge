@@ -1,0 +1,401 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "hostingPlanName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the new web app price tier to create."
+      }
+    },
+    "webSiteName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the new web app to create."
+      }
+    },
+    "sqlserverName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the new sql server to create."
+      }
+    },
+    "administratorLogin": {
+      "type": "string",
+      "metadata": {
+        "description": "The admin user of the SQL Server"
+      }
+    },
+    "administratorLoginPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password of the admin user of the SQL Server"
+      }
+    },
+    "databaseName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the new database to create."
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the new storage account to create."
+      }
+    },
+    "appinsights": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the new appinsights to create."
+      }
+    },
+    "searchServiceName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the new search service to create."
+      }
+    },
+    "searchServiceScope": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the new search service to create."
+      }
+    },
+    "searchServiceReplicas": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "The number of the search service replicas."
+      }
+    },
+    "cacheName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the new redis cache to create."
+      }
+    },
+    "storeFrontEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "The url to the storefront."
+      }
+    },
+    "notificationEmailSender": {
+      "type": "string",
+      "metadata": {
+        "description": "Sender address for notifications."
+      }
+    },
+    "cdnProfileName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of CDN Profile to create."
+      }
+    },
+    "cdnEndpointName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of CDN Endpoint to create."
+      }
+    }
+  },
+  "variables": {
+    "skuHostingPlan": "Basic",
+    "skuCodeHostingPlan": "B1",
+    "collation": "SQL_Latin1_General_CP1_CI_AS",
+    "edition": "Standard",
+    "maxSizeBytes": "268435456000",
+    "requestedServiceObjectiveName": "S0",
+    "storageAccountType": "Standard_LRS",
+    "searchSKU": "basic",
+    "cacheSKUName": "Basic",
+    "cacheSKUFamily": "C",
+    "cacheSKUCapacity": 0,
+    "skuCDN": "Premium_Verizon"
+  },
+  "resources": [
+    {
+      "name": "[parameters('sqlserverName')]",
+      "type": "Microsoft.Sql/servers",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "SqlServer"
+      },
+      "apiVersion": "2014-04-01-preview",
+      "properties": {
+        "administratorLogin": "[parameters('administratorLogin')]",
+        "administratorLoginPassword": "[parameters('administratorLoginPassword')]",
+        "version": "12.0"
+      },
+      "resources": [
+        {
+          "name": "[parameters('databaseName')]",
+          "type": "databases",
+          "location": "[resourceGroup().location]",
+          "tags": {
+            "displayName": "Database"
+          },
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [ "[concat('Microsoft.Sql/servers/', parameters('sqlserverName'))]" ],
+          "properties": {
+            "edition": "[variables('edition')]",
+            "collation": "[variables('collation')]",
+            "maxSizeBytes": "[variables('maxSizeBytes')]",
+            "requestedServiceObjectiveName": "[variables('requestedServiceObjectiveName')]"
+          }
+        },
+        {
+          "type": "firewallrules",
+          "apiVersion": "2014-04-01-preview",
+          "dependsOn": [ "[concat('Microsoft.Sql/servers/', parameters('sqlserverName'))]" ],
+          "location": "[resourceGroup().location]",
+          "name": "AllowAllWindowsAzureIps",
+          "properties": {
+            "endIpAddress": "0.0.0.0",
+            "startIpAddress": "0.0.0.0"
+          }
+        }
+      ]
+    },
+    {
+      "apiVersion": "2015-08-01",
+      "name": "[parameters('hostingPlanName')]",
+      "type": "Microsoft.Web/serverfarms",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "HostingPlan"
+      },
+      "sku": {
+        "name": "[variables('skuCodeHostingPlan')]",
+        "tier": "[variables('skuHostingPlan')]"
+      },
+      "properties": {
+        "name": "[parameters('hostingPlanName')]"
+      }
+    },
+    {
+      "apiVersion": "2015-08-01",
+      "name": "[parameters('webSiteName')]",
+      "type": "Microsoft.Web/sites",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [ "[concat('Microsoft.Web/serverFarms/', parameters('hostingPlanName'))]" ],
+      "tags": {
+        "[concat('hidden-related:', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/', parameters('hostingPlanName'))]": "empty",
+        "displayName": "Website"
+      },
+      "properties": {
+        "name": "[parameters('webSiteName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('hostingPlanName'))]"
+      },
+      "resources": [
+        {
+          "apiVersion": "2015-08-01",
+          "type": "config",
+          "name": "web",
+          "dependsOn": [ "[concat('Microsoft.Web/Sites/', parameters('webSiteName'))]" ],
+          "properties": {
+            "phpVersion": "",
+            "use32BitWorkerProcess": false,
+            "alwaysOn": true,
+            "httpsOnly": true,
+            "virtualApplications": [
+              {
+                "virtualPath": "/",
+                "physicalPath": "site\\wwwroot\\platform",
+                "preloadEnabled": false,
+                "virtualDirectories": [
+                  {
+                    "virtualPath": "/modules",
+                    "physicalPath": "site\\wwwroot\\modules"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "type": "config",
+          "name": "appsettings",
+          "dependsOn": [
+            "[concat('Microsoft.Web/Sites/', parameters('webSiteName'))]",
+            "[concat('Microsoft.Insights/components/', parameters('appinsights'))]"
+          ],
+          "properties": {
+            "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(concat('Microsoft.Insights/components/', parameters('appinsights')), '2015-05-01').InstrumentationKey]",
+            "Hap:Notifications:DefaultCulture": "en-SG",
+            "Hap:Notifications:DefaultLanguage": "en-US",
+            "Hap:StorefrontUrl": "[parameters('storeFrontEndpoint')]",
+            "Hap:TimezoneId": "Singapore Standard Time",
+            "Hei.OpcoId": "sg",
+            "Hei.TimeZoneId": "Singapore Standard Time",
+            "VirtoCommerce:Authentication:DefaultTokenLifespan": "7:00:00:00",
+            "VirtoCommerce:Authentication:Password.RequireDigit": "true",
+            "VirtoCommerce:Authentication:Password.RequiredLength": "8",
+            "VirtoCommerce:Authentication:Password.RequireLowercase": "true",
+            "VirtoCommerce:Authentication:Password.RequireNonLetterOrDigit": "false",
+            "VirtoCommerce:Authentication:Password.RequireUppercase": "true",
+            "VirtoCommerce:AutoInstallModuleBundles": "None",
+            "VirtoCommerce:DbMigration.CommandTimeout": "300",
+            "VirtoCommerce:ForgotPassword:RevealAccountState": "false",
+            "VirtoCommerce:Notifications:Gateway": "SendGrid",
+            "VirtoCommerce:Notifications:Sender:Email": "[parameters('notificationEmailSender')]"
+          }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "type": "config",
+          "name": "connectionstrings",
+          "dependsOn": [
+            "[concat('Microsoft.Web/Sites/', parameters('webSiteName'))]",
+            "[concat('Microsoft.Sql/servers/', parameters('sqlserverName'))]",
+            "[concat('Microsoft.Cache/Redis/', parameters('cacheName'))]",
+            "[concat('Microsoft.Search/searchServices/', parameters('searchServiceName'))]",
+            "[concat('Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))]",
+            "[resourceId('Microsoft.Cdn/profiles', parameters('cdnProfileName'))]"
+          ],
+          "properties": {
+            "VirtoCommerce": {
+              "value": "[concat('Server=tcp:', reference(concat('Microsoft.Sql/servers/', parameters('sqlserverName'))).fullyQualifiedDomainName, ',1433;Initial Catalog=', parameters('databaseName'), ';User Id=', parameters('administratorLogin'), '@', parameters('sqlserverName'), ';Password=', parameters('administratorLoginPassword'), ';MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=300;')]",
+              "type": "SQLAzure"
+            },
+            "AssetsConnectionString": {
+              "value": "[concat('provider=AzureBlobStorage;rootPath=assets;DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccountName'),';AccountKey=',concat(listKeys(parameters('storageAccountName'),'2015-05-01-preview').key1),';cdnUrl=',parameters('cdnEndpointName'),'.azureedge.net')]",
+              "type": "Custom"
+            },
+            "CmsConnectionString": {
+              "value": "[concat('provider=AzureBlobStorage;rootPath=cms;DefaultEndpointsProtocol=https;AccountName=',parameters('storageAccountName'),';AccountKey=',concat(listKeys(parameters('storageAccountName'),'2015-05-01-preview').key1))]",
+              "type": "Custom"
+            },
+            "SearchConnectionString": {
+              "value": "[concat('provider=AzureSearch;server=',parameters('searchServiceName'),';Key=', listAdminKeys(resourceId('Microsoft.Search/searchServices', parameters('searchServiceName')),'2015-08-19').primaryKey,';scope=',parameters('searchServiceScope'))]",
+              "type": "Custom"
+            },
+            "redisConnectionString": {
+              "value": "[concat(parameters('cacheName'),'.redis.cache.windows.net,abortConnect=false,ssl=true,password=', listKeys(resourceId('Microsoft.Cache/Redis', parameters('cacheName')),'2015-08-01').primaryKey)]",
+              "type": "Custom"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "[parameters('cacheName')]",
+      "type": "Microsoft.Cache/Redis",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-08-01",
+      "tags": {
+        "displayName": "RedisCache"
+      },
+      "properties": {
+        "sku": {
+          "name": "[variables('cacheSKUName')]",
+          "family": "[variables('cacheSKUFamily')]",
+          "capacity": "[variables('cacheSKUCapacity')]"
+        }
+      }
+    },
+    {
+      "apiVersion": "2017-10-01",
+      "name": "[parameters('storageAccountName')]",
+      "location": "[resourceGroup().location]",
+      "type": "Microsoft.Storage/storageAccounts",
+      "sku": {
+        "name": "[variables('storageAccountType')]"
+      },
+      "kind": "Storage",
+      "properties": {
+        "supportsHttpsTrafficOnly": false,
+        "encryption": {
+          "services": {
+            "blob": {
+              "enabled": true
+            },
+            "file": {
+              "enabled": true
+            }
+          },
+          "keySource": "Microsoft.Storage"
+        }
+      },
+      "tags": {
+        "displayName": "StorageAccount"
+      }
+    },
+    {
+      "name": "[parameters('appinsights')]",
+      "type": "Microsoft.Insights/components",
+      "kind": "web",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-05-01",
+      "properties": {
+        "ApplicationId": "[parameters('appinsights')]",
+        "Application_Type": "web",
+        "Flow_Type": "Bluefield",
+        "Request_Source": "rest"
+      },
+      "tags": {
+        "displayName": "ApplicationInsights"
+      }
+    },
+    {
+      "apiVersion": "2015-08-19",
+      "name": "[parameters('searchServiceName')]",
+      "location": "[resourceGroup().location]",
+      "type": "Microsoft.Search/searchServices",
+      "sku": {
+        "name": "[variables('searchSKU')]"
+      },
+      "properties": {
+        "replicaCount": "[parameters('searchServiceReplicas')]",
+        "partitionCount": 1
+      },
+      "tags": {
+        "displayName": "AzureSearch"
+      }
+    },
+    {
+      "name": "[parameters('cdnProfileName')]",
+      "type": "Microsoft.Cdn/profiles",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-04-02",
+      "sku": {
+        "name": "[variables('skuCDN')]"
+      },
+      "tags": {
+        "displayName": "CDN profile"
+      },
+      "resources": [
+        {
+          "name": "[parameters('cdnEndpointName')]",
+          "type": "endpoints",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2016-04-02",
+          "dependsOn": [
+            "[resourceId('Microsoft.Cdn/profiles', parameters('cdnProfileName'))]",
+            "[concat('Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))]"
+          ],
+          "tags": {
+            "displayName": "CDN Endpoint"
+          },
+          "properties": {
+            "originHostHeader": "[concat (parameters('storageAccountName'),'.blob.core.windows.net')]",
+            "isHttpAllowed": true,
+            "isHttpsAllowed": true,
+            "origins": [
+              {
+                "name": "[parameters('storageAccountName')]",
+                "properties": {
+                  "hostName": "[concat (parameters('storageAccountName'),'.blob.core.windows.net')]",
+                  "httpPort": 80,
+                  "httpsPort": 443
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
