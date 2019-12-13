@@ -1,0 +1,54 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "hostingPlanName": {
+      "value": "niteco-hap-admin-dev"
+    },
+    "webSiteName": {
+      "value": "niteco-hap-admin-dev"
+    },
+    "sqlserverName": {
+      "value": "niteco-hap-dev"
+    },
+    "administratorLogin": {
+      "value": "nitecoadmin"
+    },
+    "administratorLoginPassword": {
+      "value": "Niteco@01"
+    },
+    "databaseName": {
+      "value": "niteco-hap-db-dev"
+    },
+    "storageAccountName": {
+      "value": "nitecohapdev"
+    },
+    "appinsights": {
+      "value": "niteco-hap-admin-dev"
+    },
+    "searchServiceName": {
+      "value": "niteco-hapdev"
+    },
+    "searchServiceScope": {
+      "value": "dev"
+    },
+    "searchServiceReplicas": {
+      "value": 1
+    },
+    "cacheName": {
+      "value": "niteco-hap-dev-cache"
+    },
+    "storeFrontEndpoint": {
+      "value": "http://localhost/"
+    },
+    "notificationEmailSender": {
+      "value": "minh.nguyen3@niteco.se"
+    },
+    "cdnProfileName": {
+      "value": "niteco-hap-cdn-dev"
+    },
+    "cdnEndpointName": {
+      "value": "niteco-hap-images-dev"
+    }
+  }
+}
